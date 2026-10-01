@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+<defs><linearGradient id="g" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#8ef0c9"/><stop offset=".38" stop-color="#9fb4ff"/><stop offset=".7" stop-color="#e6a8ff"/><stop offset="1" stop-color="#ffc29a"/></linearGradient></defs>
+<rect width="48" height="48" rx="12" fill="#0d0d12"/>
+<g transform="translate(4.8 4.8) scale(.8)">
+<circle cx="24" cy="24" r="19" stroke="url(#g)" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="25.245 4.6" stroke-dashoffset="27.545" transform="rotate(-45 24 24)"/>
+<path d="M9.00 24.02L9.75 23.97L10.50 23.88L11.25 23.77L12.00 23.73L12.75 23.87L13.50 24.29L14.25 24.92L15.00 25.47L15.75 25.44L16.50 24.43L17.25 22.46L18.00 20.25L18.75 19.05L19.50 20.03L20.25 23.43L21.00 28.11L21.75 31.90L22.50 32.67L23.25 29.64L24.00 24.00L24.75 18.36L25.50 15.33L26.25 16.10L27.00 19.89L27.75 24.57L28.50 27.97L29.25 28.95L30.00 27.75L30.75 25.54L31.50 23.57L32.25 22.56L33.00 22.53L33.75 23.08L34.50 23.71L35.25 24.13L36.00 24.27L36.75 24.23L37.50 24.12L38.25 24.03L39.00 23.98" stroke="url(#g)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</g></svg>
