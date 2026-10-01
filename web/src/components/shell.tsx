@@ -4,7 +4,8 @@ import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { ArrowUpRight, Library as LibraryIcon, Plus } from "lucide-react";
 import Tooltip from "@mui/material/Tooltip";
 import { Logo, Mark } from "./brand/logo";
-import { Grain, SoundField } from "./fx/sound-field";
+import { SoundField } from "./fx/sound-field";
+import { RouteScan, ScopeCursor } from "./fx/scope";
 import { spring } from "../lib/motion";
 
 /** How loud the backdrop should be on each route. */
@@ -37,7 +38,7 @@ export function Nav() {
           backgroundColor: scrolled ? "rgba(13,13,18,.72)" : "rgba(13,13,18,0)",
           borderColor: scrolled ? "rgba(255,255,255,.08)" : "rgba(255,255,255,0)",
         }}
-        className={`mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full border pl-4 pr-2 transition-[backdrop-filter] duration-300 ${scrolled ? "backdrop-blur-xl" : ""}`}
+        className={`mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full border pl-4 pr-2 transition-[backdrop-filter] duration-300 ${scrolled ? "frost" : ""}`}
       >
         <Logo />
         <nav className="flex items-center gap-1">
@@ -120,7 +121,8 @@ export function Frame({ children }: { children: ReactNode }) {
   return (
     <main className="relative min-h-screen overflow-x-clip text-paper">
       <SoundField {...field} />
-      <Grain />
+      <RouteScan id={pathname.replace(/\/edit$/, "")} />
+      <ScopeCursor />
       <Nav />
       <div className="relative pt-20 sm:pt-24">{children}</div>
     </main>

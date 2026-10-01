@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import {
   AnimatePresence,
   motion,
+  useAnimationFrame,
   useInView,
+  useMotionValue,
   useMotionValueEvent,
   useScroll,
   useSpring,
@@ -14,6 +16,7 @@ import { ArrowRight, AudioLines, Check, FileAudio, Sparkles } from "lucide-react
 import { Mark } from "../../components/brand/logo";
 import { Footer } from "../../components/shell";
 import { Magnetic } from "../../components/fx/magnetic";
+import { ScopeCorners } from "../../components/fx/scope";
 import { SplitText } from "../../components/fx/split-text";
 import { SpotlightCard } from "../../components/fx/spotlight-card";
 import { VelocityMarquee } from "../../components/fx/velocity-marquee";
@@ -55,8 +58,8 @@ function Hero() {
             <span className="inline-block overflow-hidden pb-[.14em] -mb-[.14em] align-bottom">
               <motion.span
                 className="inline-block pr-[.08em] font-serif font-normal italic tracking-[-.02em] text-spectrum"
-                initial={{ y: "100%", opacity: 0, filter: "blur(12px)" }}
-                animate={{ y: "0%", opacity: 1, filter: "blur(0px)" }}
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: "0%", opacity: 1 }}
                 transition={{ duration: 1.1, ease: easeOutExpo, delay: 0.75 }}
               >
                 looping.
@@ -136,12 +139,13 @@ function HeroDemo() {
 
   const inView = useInView(wrap, { once: true, amount: 0.4 });
   const [playing, setPlaying] = useState(true);
-  const [pos, setPos] = useState(LOOP.start);
-  useEffect(() => {
-    if (!playing) return;
-    const id = setInterval(() => setPos((v) => (v + 0.18 > LOOP.end ? LOOP.start : v + 0.18)), 40);
-    return () => clearInterval(id);
-  }, [playing]);
+  const pos = useMotionValue(LOOP.start);
+  const onScreen = useInView(wrap);
+  useAnimationFrame((_, delta) => {
+    if (!playing || !onScreen) return;
+    const next = pos.get() + (delta / 1000) * 4.2;
+    pos.set(next > LOOP.end ? LOOP.start : next);
+  });
 
   return (
     <section ref={wrap} className="relative mx-auto max-w-5xl px-4 pb-24 sm:px-8" style={{ perspective: 1400 }}>
@@ -152,9 +156,10 @@ function HeroDemo() {
         }}
       >
         <motion.div style={{ rotateX, scale, y, transformOrigin: "50% 0%" }} className="relative">
-          <div aria-hidden className="absolute -inset-10 -z-10 rounded-[60px] bg-spectrum opacity-[.13] blur-[80px]" />
+          <div aria-hidden className="absolute -inset-x-24 -inset-y-20 -z-10 bg-[radial-gradient(50%_50%_at_50%_50%,rgba(159,180,255,.16),rgba(230,168,255,.06)_45%,transparent_70%)]" />
           <div className="glass relative overflow-hidden rounded-[32px] bg-ink-2/60 p-3 sm:p-4">
-            <div className="rounded-[24px] border border-white/[.06] bg-ink/60 p-4 sm:p-7">
+            <div className="relative rounded-[24px] border border-white/[.06] bg-ink/60 p-4 sm:p-7">
+              <ScopeCorners />
               <div className="flex items-center gap-4">
                 <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-peach/90 to-orchid/80 text-on-accent">
                   <FileAudio size={20} />
@@ -176,7 +181,7 @@ function HeroDemo() {
               </div>
 
               <div className="mt-7">
-                <Waveform {...LOOP} bars={HERO_WAVE} playhead={pos} framed={false} />
+                <Waveform {...LOOP} bars={HERO_WAVE} playhead={pos} framed={false} label="CH1 · midnight-drive.wav" duration={272} />
               </div>
 
               <div className="mt-7 grid gap-3 text-left sm:grid-cols-[1.25fr_1fr]">
@@ -392,9 +397,9 @@ function HowItWorks() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={active}
-                  initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -24, filter: "blur(8px)" }}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -24 }}
                   transition={{ duration: 0.5, ease: easeOutExpo }}
                 >
                   <h2 className="text-4xl font-semibold leading-[1] tracking-[-.055em] sm:text-6xl">
@@ -423,9 +428,9 @@ function HowItWorks() {
               <motion.div
                 key={active}
                 className="relative h-full"
-                initial={{ opacity: 0, scale: 0.94, filter: "blur(10px)" }}
-                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                exit={{ opacity: 0, scale: 1.04, filter: "blur(10px)" }}
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.04 }}
                 transition={{ duration: 0.5, ease: easeOutExpo }}
               >
                 <Visual />
@@ -641,7 +646,7 @@ function Closing() {
         transition={{ duration: 1, ease: easeOutExpo }}
         className="glass relative overflow-hidden rounded-[40px] bg-ink-2/40 px-6 py-20 text-center sm:py-28"
       >
-        <div aria-hidden className="absolute left-1/2 top-0 h-80 w-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-spectrum opacity-25 blur-[100px]" />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-96 bg-[radial-gradient(50%_60%_at_50%_0%,rgba(230,168,255,.22),rgba(159,180,255,.08)_50%,transparent_75%)]" />
         <motion.div
           className="relative mx-auto w-fit"
           animate={{ y: [0, -10, 0] }}

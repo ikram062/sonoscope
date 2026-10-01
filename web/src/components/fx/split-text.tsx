@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { easeOutExpo } from "../../lib/motion";
 
 /**
- * React Bits-style SplitText: each character rises out of a mask with a blur.
+ * React Bits-style SplitText: each character rises out of a mask.
  * Words are kept intact so lines never break mid-word.
  */
 export function SplitText({
@@ -36,11 +36,10 @@ export function SplitText({
                 <motion.span
                   className={`inline-block ${className}`}
                   variants={{
-                    hidden: { y: "105%", opacity: 0, filter: "blur(10px)" },
+                    hidden: { y: "105%", opacity: 0 },
                     show: {
                       y: "0%",
                       opacity: 1,
-                      filter: "blur(0px)",
                       transition: { duration: 0.9, ease: easeOutExpo, delay: delay + i * stagger },
                     },
                   }}

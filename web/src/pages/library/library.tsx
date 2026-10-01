@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AnimatePresence, motion, type Variants } from "motion/react";
+import { AnimatePresence, motion, useAnimationFrame, useMotionValue, type MotionValue, type Variants } from "motion/react";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { ArrowDownWideNarrow, Check, Plus, Search, SearchX, X } from "lucide-react";
@@ -13,15 +13,14 @@ import { alpha, demoWave, fakeLibrary, formatTime, type LibraryItem } from "../.
 import { bouncy, fadeUp, press, spring, stagger, MotionLink } from "../../lib/motion";
 
 const card: Variants = {
-  hidden: { opacity: 0, y: 40, scale: 0.94, filter: "blur(8px)" },
+  hidden: { opacity: 0, y: 40, scale: 0.94 },
   show: (i: number = 0) => ({
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: "blur(0px)",
     transition: { ...spring, stiffness: 220, damping: 24, delay: 0.15 + i * 0.07 },
   }),
-  exit: { opacity: 0, scale: 0.9, filter: "blur(6px)", transition: { duration: 0.2 } },
+  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } },
 };
 
 const sorts: { id: string; label: string; fn: (a: LibraryItem, b: LibraryItem) => number }[] = [
@@ -38,7 +37,7 @@ function LoopCard({
 }: {
   item: LibraryItem;
   playing: boolean;
-  pos: number;
+  pos: MotionValue<number>;
   onToggle: () => void;
 }) {
   const i = fakeLibrary.indexOf(item);
@@ -133,7 +132,7 @@ export default function LibraryPage() {
   const [sort, setSort] = useState(sorts[0]);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
-  const [pos, setPos] = useState(0);
+  const pos = useMotionValue(0);
 
   const filters = ["All", ...new Set(fakeLibrary.map((x) => x.genre))];
   const items = fakeLibrary
@@ -146,13 +145,13 @@ export default function LibraryPage() {
 
   // Simulated preview: the playhead sweeps the saved region of the playing card.
   const current = fakeLibrary.find((x) => x.id === playing);
-  useEffect(() => {
+  useAnimationFrame((_, delta) => {
     if (!current) return;
     const s = (current.start / current.duration) * 100;
     const e = (current.end / current.duration) * 100;
-    const id = setInterval(() => setPos((p) => (p + 0.12 > e ? s : p + 0.12)), 40);
-    return () => clearInterval(id);
-  }, [current]);
+    const next = pos.get() + (delta / 1000 / current.duration) * 100;
+    pos.set(next > e || next < s ? s : next);
+  });
 
   return (
     <>
@@ -272,7 +271,7 @@ export default function LibraryPage() {
                   playing={playing === item.id}
                   pos={pos}
                   onToggle={() => {
-                    setPos((item.start / item.duration) * 100);
+                    pos.set((item.start / item.duration) * 100);
                     setPlaying(playing === item.id ? null : item.id);
                   }}
                 />

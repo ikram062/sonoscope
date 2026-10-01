@@ -94,10 +94,10 @@ void main() {
     col += c * line * 0.11 * uIntensity * (0.25 + 0.75 * env);
   }
 
-  // Vignette + dither to avoid banding in the dark gradients.
+  // Vignette, then film grain (doubles as dither against banding).
   float vig = smoothstep(1.25, 0.15, length(p * vec2(0.85, 1.15)));
   col *= mix(0.45, 1.0, vig);
-  col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
+  col += (hash(gl_FragCoord.xy) - 0.5) * 0.028;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -121,9 +121,12 @@ export function SoundField({ intensity = 1, speed = 1, focus = 0 }: Props) {
     const el = host.current;
     if (!el) return;
 
+    // The field is all soft light, so it is drawn below screen resolution and
+    // upscaled by CSS. If frames still run long, quality drops a step.
+    let scale = 0.75;
     let renderer: Renderer;
     try {
-      renderer = new Renderer({ dpr: Math.min(window.devicePixelRatio, 1.25), alpha: false });
+      renderer = new Renderer({ dpr: scale, alpha: false, antialias: false, powerPreference: "low-power" });
     } catch {
       return; // No WebGL: the CSS backdrop behind the canvas still shows.
     }
@@ -147,7 +150,10 @@ export function SoundField({ intensity = 1, speed = 1, focus = 0 }: Props) {
     const mesh = new Mesh(gl, { geometry: new Triangle(gl), program });
 
     const resize = () => {
+      renderer.dpr = scale;
       renderer.setSize(window.innerWidth, window.innerHeight);
+      gl.canvas.style.width = "100%";
+      gl.canvas.style.height = "100%";
       program.uniforms.uRes.value = [gl.drawingBufferWidth, gl.drawingBufferHeight];
     };
     resize();
@@ -165,12 +171,24 @@ export function SoundField({ intensity = 1, speed = 1, focus = 0 }: Props) {
     let last = performance.now();
     let time = 8; // start mid-drift so the first frame already looks composed
     let speedNow = target.current.speed;
+    let slowFrames = 0;
+    let sampled = 0;
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       if (document.hidden) return;
+
+      // Adaptive quality: if most of the first ~2s of frames miss 50fps, step down once.
+      if (scale > 0.5 && sampled < 120) {
+        sampled++;
+        if (dt > 1 / 50) slowFrames++;
+        if (sampled === 120 && slowFrames > 40) {
+          scale = 0.5;
+          resize();
+        }
+      }
 
       const u = program.uniforms;
       const k = 1 - Math.exp(-dt * 2.2);
@@ -199,20 +217,6 @@ export function SoundField({ intensity = 1, speed = 1, focus = 0 }: Props) {
       ref={host}
       aria-hidden
       className="pointer-events-none fixed inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,#1a1630,transparent),radial-gradient(60%_50%_at_80%_100%,#2a1a24,transparent)]"
-    />
-  );
-}
-
-/** Film grain overlay. Cheap SVG noise, fixed on top of everything. */
-export function Grain() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed inset-0 z-[60] opacity-[.07] mix-blend-overlay"
-      style={{
-        backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-      }}
     />
   );
 }

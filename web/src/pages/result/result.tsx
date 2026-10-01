@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useAnimationFrame, useMotionValue } from "motion/react";
 import Slider from "@mui/material/Slider";
 import Tooltip from "@mui/material/Tooltip";
 import {
@@ -55,9 +55,9 @@ const reasons: Record<string, string> = {
 };
 
 const swap = {
-  initial: { opacity: 0, y: 14, filter: "blur(6px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-  exit: { opacity: 0, y: -14, filter: "blur(6px)" },
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -14 },
   transition: { duration: 0.35, ease: easeOutExpo },
 };
 
@@ -123,7 +123,9 @@ export default function ResultPage() {
   const [end, setEnd] = useState(state.end ?? track.aiEnd);
   const [snapshot, setSnapshot] = useState<[number, number] | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [pos, setPos] = useState<number | null>(null);
+  // Playhead lives in a MotionValue: playback never re-renders the page.
+  const pos = useMotionValue(state.start ?? track.aiStart);
+  const [seeked, setSeeked] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [muted, setMuted] = useState<string[]>(["Vocals"]);
   const [solo, setSolo] = useState<string | null>(null);
@@ -136,24 +138,28 @@ export default function ResultPage() {
     Other: 32,
   });
 
-  // Simulated playback that loops inside the selected region.
-  useEffect(() => {
+  // Simulated playback, in real time, looping inside the selected region.
+  useAnimationFrame((_, delta) => {
     if (!playing) return;
-    const id = setInterval(() => {
-      setPos((p) => {
-        const next = (p ?? start) + 0.25;
-        return next > end || next < start ? start : next;
-      });
-    }, 40);
-    return () => clearInterval(id);
-  }, [playing, start, end]);
+    const next = pos.get() + (delta / 1000 / track.duration) * 100;
+    pos.set(next > end || next < start ? start : next);
+  });
+  // Keep the playhead inside the loop when its edges move.
+  useEffect(() => {
+    const v = pos.get();
+    if (v < start || v > end) pos.set(start);
+  }, [start, end, pos]);
+  const togglePlay = () => {
+    setPlaying((p) => !p);
+    setSeeked(true);
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       if (e.code === "Space" && !el.closest("input,button,[role=slider]")) {
         e.preventDefault();
-        setPlaying((p) => !p);
+        togglePlay();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -278,7 +284,7 @@ export default function ResultPage() {
             </span>
             <PlayButton
               playing={playing}
-              onClick={() => setPlaying((p) => !p)}
+              onClick={togglePlay}
               label={playing ? "Pause loop" : "Play loop"}
               size={68}
             />
@@ -287,26 +293,30 @@ export default function ResultPage() {
 
         <motion.div
           variants={{
-            hidden: { opacity: 0, y: 30, scale: 0.98, filter: "blur(10px)" },
-            show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.9, ease: easeOutExpo, delay: 0.15 } },
+            hidden: { opacity: 0, y: 30, scale: 0.98 },
+            show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.9, ease: easeOutExpo, delay: 0.15 } },
           }}
           className="mt-10"
         >
           <Waveform
             editable={edit}
+            label={`CH1 · ${track.title}`}
             start={start}
             end={end}
             bars={track.bars}
             duration={track.duration}
             color={track.color}
             minLength={barPct}
-            playhead={playing || (pos != null && pos >= start && pos <= end) ? pos : null}
+            playhead={playing || seeked ? pos : null}
             onChange={(s, e) => {
               setStart(s);
               setEnd(e);
             }}
             onSeek={(p) => {
-              if (p >= start && p <= end) setPos(p);
+              if (p >= start && p <= end) {
+                pos.set(p);
+                setSeeked(true);
+              }
             }}
           />
         </motion.div>
@@ -387,7 +397,7 @@ export default function ResultPage() {
         <motion.div variants={stagger(0.12, 0.35)} className="mt-6 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           {/* Why this loop */}
           <motion.div variants={fadeUp} className="glass ring-spectrum relative overflow-hidden rounded-[28px] bg-ink-2/40 p-6 sm:p-8">
-            <div aria-hidden className="absolute -right-24 -top-24 size-72 rounded-full bg-spectrum opacity-[.12] blur-[70px]" />
+            <div aria-hidden className="absolute -right-32 -top-32 size-96 bg-[radial-gradient(closest-side,rgba(230,168,255,.14),transparent)]" />
             <div className="relative flex items-center justify-between gap-3">
               <Eyebrow icon={<Sparkles size={13} className="text-orchid" />}>Why this loop</Eyebrow>
               <AnimatePresence>

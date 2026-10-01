@@ -11,17 +11,15 @@ export const easeOutExpo = [0.16, 1, 0.3, 1] as const;
 
 /** Route-level wrapper. Its variant labels propagate to every child using `variants`. */
 export const page: Variants = {
-  hidden: { opacity: 0, y: 18, filter: "blur(8px)" },
+  hidden: { opacity: 0, y: 18 },
   show: {
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
     transition: { duration: 0.5, ease: easeOutExpo },
   },
   exit: {
     opacity: 0,
     y: -10,
-    filter: "blur(6px)",
     transition: { duration: 0.22, ease: [0.4, 0, 1, 1] },
   },
 };
@@ -32,8 +30,8 @@ export const stagger = (gap = 0.06, delay = 0): Variants => ({
 });
 
 export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18, filter: "blur(6px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.6, ease: easeOutExpo } },
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: easeOutExpo } },
 };
 
 export const popIn: Variants = {

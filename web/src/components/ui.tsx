@@ -152,7 +152,7 @@ export function PlayButton({
       {playing && (
         <motion.span
           aria-hidden
-          className="absolute inset-0 rounded-full bg-spectrum blur-lg"
+          className="absolute -inset-3 rounded-full bg-[radial-gradient(closest-side,rgba(230,168,255,.55),transparent)]"
           animate={{ opacity: [0.35, 0.7, 0.35] }}
           transition={{ duration: 1.6, repeat: Infinity }}
         />
@@ -199,7 +199,7 @@ export function ActionBar({ children, width = "max-w-3xl" }: { children: ReactNo
       }}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-6 sm:pb-6"
     >
-      <div className={`pointer-events-auto glass mx-auto rounded-[26px] bg-ink-2/70 ${width}`}>
+      <div className={`pointer-events-auto glass frost mx-auto rounded-[26px] ${width}`}>
         {children}
       </div>
     </motion.div>,
@@ -213,9 +213,9 @@ export function Toast({ message }: { message: string | null }) {
       {message && (
         <motion.div
           role="status"
-          initial={{ opacity: 0, y: -30, scale: 0.8, filter: "blur(8px)" }}
-          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: -16, scale: 0.9, filter: "blur(6px)" }}
+          initial={{ opacity: 0, y: -30, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -16, scale: 0.9 }}
           transition={bouncy}
           className="glass ring-spectrum fixed inset-x-0 top-5 z-[70] mx-auto flex w-fit items-center gap-2.5 rounded-full bg-ink-3/80 py-2 pl-2 pr-4 text-sm"
         >

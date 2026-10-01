@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from "react";
 import {
   motion,
   useAnimationFrame,
+  useInView,
   useMotionValue,
   useReducedMotion,
   useScroll,
@@ -32,9 +33,11 @@ export function VelocityMarquee({
   const x = useTransform(base, (v) => `${wrap(-25, -50, v)}%`);
   const direction = useRef(1);
   const reduce = useReducedMotion();
+  const box = useRef<HTMLDivElement>(null);
+  const onScreen = useInView(box);
 
   useAnimationFrame((_, delta) => {
-    if (reduce) return;
+    if (reduce || !onScreen) return;
     let move = direction.current * baseVelocity * (delta / 1000);
     const f = factor.get();
     if (f < 0) direction.current = -1;
@@ -44,7 +47,7 @@ export function VelocityMarquee({
   });
 
   return (
-    <div className={`overflow-hidden whitespace-nowrap ${className}`}>
+    <div ref={box} className={`overflow-hidden whitespace-nowrap ${className}`}>
       <motion.div className="flex w-max flex-nowrap" style={{ x }}>
         {[0, 1, 2, 3].map((i) => (
           <div key={i} aria-hidden={i > 0} className="flex shrink-0 items-center">

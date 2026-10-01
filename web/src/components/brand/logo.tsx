@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, useAnimationFrame, useReducedMotion } from "motion/react";
+import { motion, useAnimationFrame, useInView, useReducedMotion } from "motion/react";
 import { palette } from "../../lib/sonoscope";
 
 /**
@@ -38,6 +38,8 @@ type MarkProps = {
 
 export function Mark({ size = 32, animated = false, speed = 1, glow = false, className }: MarkProps) {
   const id = useId().replace(/:/g, "");
+  const svg = useRef<SVGSVGElement>(null);
+  const onScreen = useInView(svg);
   const wave = useRef<SVGPathElement>(null);
   const halo = useRef<SVGPathElement>(null);
   const reduce = useReducedMotion();
@@ -48,7 +50,7 @@ export function Mark({ size = 32, animated = false, speed = 1, glow = false, cla
   const phase = useRef(0);
 
   useAnimationFrame((_, delta) => {
-    if (!animated || reduce) return;
+    if (!animated || reduce || !onScreen) return;
     phase.current -= (delta / 1000) * 2.4 * speedRef.current;
     const d = wavePath(phase.current, 9.5 * (0.85 + 0.15 * Math.sin(phase.current * 0.5)));
     wave.current?.setAttribute("d", d);
@@ -57,6 +59,7 @@ export function Mark({ size = 32, animated = false, speed = 1, glow = false, cla
 
   return (
     <svg
+      ref={svg}
       width={size}
       height={size}
       viewBox="0 0 48 48"

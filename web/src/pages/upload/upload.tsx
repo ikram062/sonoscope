@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion, useAnimate } from "motion/react";
+import { AnimatePresence, motion, useAnimate, useAnimationFrame, useMotionValue } from "motion/react";
 import Tooltip from "@mui/material/Tooltip";
 import {
   ArrowRight,
@@ -158,9 +158,15 @@ export default function UploadPage() {
   const [duration, setDuration] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [pos, setPos] = useState(0);
+  const [pos, setPos] = useState(0); // coarse, for the time label
   const input = useRef<HTMLInputElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
+  // Smooth playhead: read straight from the audio clock every frame.
+  const head = useMotionValue(0);
+  useAnimationFrame(() => {
+    const a = audio.current;
+    if (playing && a?.duration) head.set((a.currentTime / a.duration) * 100);
+  });
   const [dropScope, animateDrop] = useAnimate<HTMLDivElement>();
 
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url]);
@@ -173,6 +179,7 @@ export default function UploadPage() {
     setUrl(null);
     setPlaying(false);
     setPos(0);
+    head.set(0);
     if (input.current) input.current.value = "";
   };
 
@@ -221,6 +228,14 @@ export default function UploadPage() {
     if (!a) return;
     if (a.paused) a.play();
     else a.pause();
+  };
+
+  const seek = (p: number) => {
+    const a = audio.current;
+    if (!a || !duration) return;
+    a.currentTime = (p / 100) * duration;
+    setPos(p);
+    head.set(p);
   };
 
   const analyze = () => {
@@ -372,9 +387,9 @@ export default function UploadPage() {
               {file ? (
                 <motion.div
                   key="file"
-                  initial={{ opacity: 0, scale: 0.95, y: 12, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, scale: 0.95, y: -8, filter: "blur(8px)" }}
+                  initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
                   transition={spring}
                   className="glass rounded-[28px] bg-ink-2/50 p-4 sm:p-5"
                 >
@@ -442,14 +457,8 @@ export default function UploadPage() {
                             start={0}
                             end={100}
                             duration={duration}
-                            playhead={playing || pos > 0 ? pos : null}
-                            onSeek={(p) => {
-                              const a = audio.current;
-                              if (a && duration) {
-                                a.currentTime = (p / 100) * duration;
-                                setPos(p);
-                              }
-                            }}
+                            playhead={playing || pos > 0 ? head : null}
+                            onSeek={seek}
                           />
                         </motion.div>
                       ) : (
@@ -473,6 +482,7 @@ export default function UploadPage() {
                       onEnded={() => {
                         setPlaying(false);
                         setPos(0);
+    head.set(0);
                       }}
                       onTimeUpdate={(e) => {
                         const a = e.currentTarget;
@@ -486,7 +496,7 @@ export default function UploadPage() {
                   key="drop"
                   initial={{ opacity: 0, scale: 0.97 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97, filter: "blur(6px)" }}
+                  exit={{ opacity: 0, scale: 0.97 }}
                   transition={spring}
                 >
                   <motion.div

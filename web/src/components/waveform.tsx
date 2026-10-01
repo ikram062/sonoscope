@@ -1,7 +1,18 @@
-import { useRef, useState, type CSSProperties } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  AnimatePresence,
+  isMotionValue,
+  motion,
+  useMotionValue,
+  useTransform,
+  type MotionValue,
+} from "motion/react";
 import { alpha, fallbackWave, formatTime, SPECTRUM, spectrumGradient } from "../lib/sonoscope";
-import { bouncy, spring, stagger } from "../lib/motion";
+import { bouncy, easeOutExpo, spring } from "../lib/motion";
+import { ScopeCorners } from "./fx/scope";
+
+/** A playhead given as a plain number or a MotionValue (preferred: no re-renders). */
+export type Playhead = number | MotionValue<number> | null;
 
 type WaveformProps = {
   /** Loop start/end as a percentage of the track. */
@@ -11,7 +22,7 @@ type WaveformProps = {
   /** Track length in seconds, used for time labels. */
   duration?: number;
   /** Playhead position as a percentage, or null to hide it. */
-  playhead?: number | null;
+  playhead?: Playhead;
   editable?: boolean;
   compact?: boolean;
   /** A hex colour, or `SPECTRUM` to paint the region with the full gradient. */
@@ -19,9 +30,40 @@ type WaveformProps = {
   minLength?: number;
   /** Draw the surrounding glass panel. */
   framed?: boolean;
+  /** Channel label shown in the scope readout (non-compact only). */
+  label?: string;
   onChange?: (start: number, end: number) => void;
   onSeek?: (pct: number) => void;
 };
+
+/** Normalises a number | MotionValue playhead into one MotionValue. */
+function usePlayheadValue(playhead: Playhead) {
+  const local = useMotionValue(typeof playhead === "number" ? playhead : 0);
+  useEffect(() => {
+    if (typeof playhead === "number") local.set(playhead);
+  }, [playhead, local]);
+  return isMotionValue(playhead) ? playhead : local;
+}
+
+function Bars({
+  bars,
+  paint,
+  className,
+  clip,
+}: {
+  bars: number[];
+  paint: (i: number) => CSSProperties;
+  className: string;
+  clip?: MotionValue<string>;
+}) {
+  return (
+    <motion.div aria-hidden className={className} style={clip ? { clipPath: clip } : undefined}>
+      {bars.map((h, i) => (
+        <span key={i} className="w-full rounded-full" style={{ height: `${h}%`, ...paint(i) }} />
+      ))}
+    </motion.div>
+  );
+}
 
 export function Waveform({
   start = 30,
@@ -34,6 +76,7 @@ export function Waveform({
   color = SPECTRUM,
   minLength = 4,
   framed = true,
+  label,
   onChange,
   onSeek,
 }: WaveformProps) {
@@ -42,19 +85,34 @@ export function Waveform({
   const regionTransition = dragging ? { duration: 0 } : spring;
   const isSpectrum = color === SPECTRUM;
   const n = bars.length;
+  const showHead = playhead != null;
+
+  // Playback is driven by a MotionValue, so the playhead moves without React renders.
+  const head = usePlayheadValue(playhead);
+  const headLeft = useTransform(head, (v) => `${v}%`);
+  // The bright "played" layer is revealed up to the playhead with a clip-path.
+  const playedClip = useTransform(
+    head,
+    (v) => `inset(-20% ${100 - Math.max(start, Math.min(v, end))}% -20% 0)`,
+  );
+  const timecode = useTransform(head, (v) => formatTime((v / 100) * duration));
 
   const regionFill = isSpectrum
-    ? "linear-gradient(90deg, rgba(142,240,201,.12), rgba(159,180,255,.10), rgba(230,168,255,.10), rgba(255,194,154,.12))"
+    ? "linear-gradient(90deg, rgba(142,240,201,.10), rgba(159,180,255,.08), rgba(230,168,255,.08), rgba(255,194,154,.10))"
     : `linear-gradient(180deg, ${alpha(color, 0.14)}, ${alpha(color, 0.05)})`;
+  const glow = isSpectrum
+    ? "radial-gradient(closest-side, rgba(159,180,255,.22), rgba(230,168,255,.08) 60%, transparent)"
+    : `radial-gradient(closest-side, ${alpha(color, 0.28)}, transparent)`;
   const edge = isSpectrum ? "rgba(255,255,255,.16)" : alpha(color, 0.35);
   const solid = isSpectrum ? "#f4f1ea" : color;
 
   // The spectrum is stretched across the loop region (not the whole track), so
   // every loop shows the full gradient. Each bar paints its own slice of it.
   const centre = (i: number) => ((i + 0.5) / n) * 100;
+  const isActive = (i: number) => centre(i) >= start && centre(i) <= end;
   const first = bars.findIndex((_, i) => centre(i) >= start);
-  const count = Math.max(1, bars.filter((_, i) => centre(i) >= start && centre(i) <= end).length);
-  const barPaint = (i: number): CSSProperties =>
+  const count = Math.max(1, bars.filter((_, i) => isActive(i)).length);
+  const activePaint = (i: number): CSSProperties =>
     isSpectrum
       ? {
           backgroundImage: spectrumGradient,
@@ -62,6 +120,12 @@ export function Waveform({
           backgroundPosition: `${((i - first) / Math.max(1, count - 1)) * 100}% 0`,
         }
       : { background: color };
+  const basePaint = (i: number): CSSProperties =>
+    isActive(i)
+      ? { ...activePaint(i), opacity: showHead ? 0.36 : 1, transition: "opacity .3s" }
+      : { background: "rgba(244,241,234,.15)" };
+  const playedPaint = (i: number): CSSProperties =>
+    isActive(i) ? activePaint(i) : { visibility: "hidden" };
 
   const pctFromEvent = (clientX: number) => {
     const r = track.current!.getBoundingClientRect();
@@ -103,23 +167,54 @@ export function Waveform({
     },
   });
 
+  const barRow = `flex items-center gap-[2px] sm:gap-[3px] ${compact ? "h-14" : "h-32 sm:h-40"}`;
+
   return (
     <div
       className={`relative select-none ${framed ? `glass rounded-[22px] ${compact ? "p-3" : "p-5 sm:p-8"}` : ""}`}
     >
+      {!compact && framed && <ScopeCorners />}
+
+      {!compact && label && (
+        <div className="mb-6 flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[.2em] text-paper/35">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="size-1.5 shrink-0 rounded-full bg-mint shadow-[0_0_8px_#8ef0c9]" />
+            <span className="truncate">{label}</span>
+          </span>
+          <span className="shrink-0 tabular-nums text-paper/55">
+            <motion.span>{timecode}</motion.span> / {formatTime(duration)}
+          </span>
+        </div>
+      )}
+
       <div
         ref={track}
         onClick={(e) => onSeek?.(pctFromEvent(e.clientX))}
         className={`relative ${onSeek ? "cursor-pointer" : ""}`}
       >
+        {/* Oscilloscope graticule + zero line. */}
+        {!compact && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 inset-y-[-12px] [mask-image:radial-gradient(80%_100%_at_50%_50%,#000_45%,transparent)]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)",
+              backgroundSize: "5% 25%",
+            }}
+          >
+            <span className="absolute inset-x-0 top-1/2 h-px bg-white/[.08]" />
+          </div>
+        )}
+
         {/* Loop region: a soft glow underneath and a tinted window on top. */}
         <motion.div
           aria-hidden
-          className="absolute inset-y-0 rounded-xl opacity-40 blur-2xl"
+          className="absolute -inset-y-8"
           initial={false}
-          animate={{ left: `${start}%`, width: `${end - start}%` }}
+          animate={{ left: `${start - 4}%`, width: `${end - start + 8}%` }}
           transition={regionTransition}
-          style={{ background: isSpectrum ? spectrumGradient : color }}
+          style={{ background: glow }}
         />
         <motion.div
           className={`absolute ${compact ? "inset-y-[-4px] rounded-lg" : "inset-y-[-10px] rounded-xl"}`}
@@ -129,48 +224,27 @@ export function Waveform({
           style={{ background: regionFill, boxShadow: `inset 0 0 0 1px ${edge}` }}
         />
 
+        {/* One wipe-in for the whole waveform instead of a per-bar animation. */}
         <motion.div
-          initial="hidden"
-          animate="show"
-          variants={stagger(0.45 / n)}
-          className={`relative flex items-center gap-[2px] sm:gap-[3px] ${compact ? "h-14" : "h-32 sm:h-40"}`}
+          className="relative"
+          initial={{ clipPath: "inset(0% 100% 0% 0%)" }}
+          animate={{ clipPath: "inset(0% 0% 0% 0%)" }}
+          transition={{ duration: 1.1, ease: easeOutExpo }}
         >
-          {bars.map((h, i) => {
-            const p = centre(i);
-            const active = p >= start && p <= end;
-            const dimmed = active && playhead != null && p > playhead;
-            return (
-              <motion.span
-                key={i}
-                variants={{
-                  hidden: { scaleY: 0.04, opacity: 0 },
-                  show: {
-                    scaleY: 1,
-                    opacity: 1,
-                    transition: { type: "spring", stiffness: 220, damping: 16 },
-                  },
-                }}
-                className="w-full rounded-full"
-                style={{
-                  height: `${h}%`,
-                  ...(active ? barPaint(i) : { background: "rgba(244,241,234,.16)" }),
-                  // filter, not opacity: opacity is owned by the entrance animation.
-                  filter: dimmed ? "opacity(.38)" : "none",
-                  transition: "filter .25s",
-                }}
-              />
-            );
-          })}
+          <Bars bars={bars} paint={basePaint} className={barRow} />
+          {showHead && (
+            <Bars bars={bars} paint={playedPaint} className={`absolute inset-0 ${barRow}`} clip={playedClip} />
+          )}
         </motion.div>
 
         <AnimatePresence>
-          {playhead != null && (
+          {showHead && (
             <motion.div
               initial={{ opacity: 0, scaleY: 0 }}
               animate={{ opacity: 1, scaleY: 1 }}
               exit={{ opacity: 0, scaleY: 0 }}
-              className={`pointer-events-none absolute w-[2px] -translate-x-1/2 rounded-full bg-paper shadow-[0_0_14px_2px_rgba(255,255,255,.6)] ${compact ? "inset-y-[-6px]" : "inset-y-[-16px]"}`}
-              style={{ left: `${playhead}%` }}
+              className={`pointer-events-none absolute w-[2px] -translate-x-1/2 rounded-full bg-paper shadow-[0_0_14px_2px_rgba(255,255,255,.55)] ${compact ? "inset-y-[-6px]" : "inset-y-[-16px]"}`}
+              style={{ left: headLeft }}
             >
               {!compact && (
                 <span className="absolute -top-1 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-paper" />
@@ -210,7 +284,7 @@ export function Waveform({
                   </motion.span>
                   <motion.span
                     animate={{ opacity: dragging === which ? 1 : 0.75, y: dragging === which ? -4 : 0 }}
-                    className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-ink-3/90 px-1.5 py-0.5 font-mono text-[10px] text-paper/85"
+                    className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-md border border-white/10 bg-ink-3 px-1.5 py-0.5 font-mono text-[10px] text-paper/85"
                   >
                     {formatTime((at / 100) * duration)}
                   </motion.span>

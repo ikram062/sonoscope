@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useSpring, useTransform } from "motion/react";
 import { Check } from "lucide-react";
 import { Mark } from "../../components/brand/logo";
 import { RadialVisualizer } from "../../components/fx/radial-visualizer";
+import { ScopeCorners } from "../../components/fx/scope";
 import { Eyebrow, Num, Serif } from "../../components/ui";
 import { btn } from "../../lib/styles";
 import { genreColor } from "../../lib/sonoscope";
@@ -53,12 +54,13 @@ export default function ProcessingPage() {
     <section className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-3xl flex-col items-center justify-center px-5 pb-16 pt-4">
       <motion.div
         variants={{
-          hidden: { scale: 0.6, opacity: 0, filter: "blur(20px)" },
-          show: { scale: 1, opacity: 1, filter: "blur(0px)", transition: { duration: 1.1, ease: easeOutExpo } },
+          hidden: { scale: 0.6, opacity: 0 },
+          show: { scale: 1, opacity: 1, transition: { duration: 1.1, ease: easeOutExpo } },
         }}
         className="relative grid place-items-center"
       >
-        <div aria-hidden className="absolute size-56 rounded-full bg-spectrum opacity-20 blur-[70px]" />
+        <div aria-hidden className="absolute size-[420px] bg-[radial-gradient(closest-side,rgba(230,168,255,.22),rgba(159,180,255,.08)_55%,transparent)]" />
+        <ScopeCorners inset={-8} size={16} />
         <RadialVisualizer size={340} energy={0.6 + (p / 100) * 0.4} done={done} />
         <div className="absolute grid place-items-center">
           <AnimatePresence mode="wait">
@@ -90,9 +92,9 @@ export default function ProcessingPage() {
             <motion.span
               key={String(done)}
               className="inline-block"
-              initial={{ y: 20, opacity: 0, filter: "blur(8px)" }}
-              animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-              exit={{ y: -20, opacity: 0, filter: "blur(8px)" }}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
             >
               {done ? (
                 <>
