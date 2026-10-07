@@ -9,7 +9,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // url      = env("DATABASE_URL")
 }
 
 enum Genre {
@@ -35,8 +35,9 @@ enum StemType {
 model User {
   id        String     @id @default(cuid())
   email     String     @unique
-  name      String?
-  genre     Genre? 
+  username  String     @unique
+  password  String
+  genre     Genre?
   sonofiles Sonofile[]
   createdAt DateTime   @default(now())
 }
