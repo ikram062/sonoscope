@@ -4,10 +4,67 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  // output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Genre {
+  ROCK
+  HIP_HOP
+  RNB
+  LOFI
+  POP
+  JAZZ
+  ELECTRONIC
+  OTHER
+}
+
+enum StemType {
+  VOCALS
+  DRUMS
+  BASS
+  GUITAR
+  PIANO
+  OTHER
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  genre     Genre? 
+  sonofiles Sonofile[]
+  createdAt DateTime   @default(now())
+}
+
+model Sonofile {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  link  String
+  genre Genre 
+  loopStart Float
+  loopEnd   Float
+  reason String
+  loopStems StemType[]
+  stems Stem?
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+model Stem {
+  id         String   @id @default(cuid())
+  sonofileId String   @unique
+  sonofile   Sonofile @relation(fields: [sonofileId], references: [id], onDelete: Cascade)
+ 
+  vocals String
+  drums  String
+  bass   String
+  guitar String
+  piano  String
+  other  String
 }
