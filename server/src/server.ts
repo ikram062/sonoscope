@@ -2,7 +2,6 @@ import express from 'express'
 import stemsRouter from './routes/stems.routes.js'
 import { resetWorkDir } from './services/stems.services.js'
 
-const app = express()
 const port = process.env.PORT || 3000
 
 app.use(express.json())
