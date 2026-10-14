@@ -8,6 +8,7 @@ import UploadPage from "./pages/upload/upload";
 import ProcessingPage from "./pages/processing/processing";
 import ResultPage from "./pages/result/result";
 import LibraryPage from "./pages/library/library";
+import StemsPage from "./pages/stems/stems";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -30,6 +31,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/processing" element={<ProcessingPage />} />
+          <Route path="/stems" element={<StemsPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/result/:id/*" element={<ResultPage />} />
           <Route path="*" element={<HomePage />} />

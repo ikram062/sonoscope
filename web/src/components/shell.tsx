@@ -1,8 +1,7 @@
 import { useState, type ReactNode } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
-import { ArrowUpRight, Library as LibraryIcon, Plus } from "lucide-react";
-import Tooltip from "@mui/material/Tooltip";
+import { ArrowUpRight, Library as LibraryIcon, Sparkles, Split } from "lucide-react";
 import { Logo, Mark } from "./brand/logo";
 import { SoundField } from "./fx/sound-field";
 import { RouteScan, ScopeCursor } from "./fx/scope";
@@ -16,7 +15,35 @@ function fieldFor(pathname: string) {
   return { intensity: 0.5, speed: 0.6, focus: 0.18 };
 }
 
+const tabs = [
+  {
+    to: "/stems",
+    label: "Stem Separator",
+    icon: Split,
+    tint: "text-mint",
+    compact: false,
+    match: (p: string) => p.startsWith("/stems"),
+  },
+  {
+    to: "/upload",
+    label: "AI Sample Finder",
+    icon: Sparkles,
+    tint: "text-orchid",
+    compact: false,
+    match: (p: string) => p === "/upload" || p === "/processing" || p.startsWith("/result"),
+  },
+  {
+    to: "/library",
+    label: "Library",
+    icon: LibraryIcon,
+    tint: "text-iris",
+    compact: true,
+    match: (p: string) => p.startsWith("/library"),
+  },
+];
+
 export function Nav() {
+  const { pathname } = useLocation();
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -42,41 +69,28 @@ export function Nav() {
       >
         <Logo />
         <nav className="flex items-center gap-1">
-          <NavLink
-            to="/library"
-            className={({ isActive }) =>
-              `relative flex h-10 items-center gap-2 rounded-full px-4 text-sm transition-colors ${isActive ? "text-paper" : "text-paper/55 hover:text-paper"}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
+          {tabs.map((t) => {
+            const active = t.match(pathname);
+            return (
+              <Link
+                key={t.to}
+                to={t.to}
+                aria-current={active ? "page" : undefined}
+                aria-label={t.label}
+                className={`relative flex h-10 items-center gap-2 rounded-full px-3.5 text-sm transition-colors sm:px-4 ${active ? "text-paper" : "text-paper/55 hover:text-paper"}`}
+              >
+                {active && (
                   <motion.span
                     layoutId="nav-pill"
                     transition={spring}
                     className="absolute inset-0 rounded-full bg-white/[.08] ring-1 ring-white/10"
                   />
                 )}
-                <LibraryIcon size={15} className="relative" />
-                <span className="relative hidden sm:inline">Library</span>
-              </>
-            )}
-          </NavLink>
-          <Tooltip title="Analyze a new track">
-            <motion.span whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }} className="inline-flex">
-              <Link
-                to="/upload"
-                className="group relative isolate flex h-10 items-center gap-2 overflow-hidden rounded-full bg-paper pl-2 pr-4 text-sm font-medium text-on-accent"
-              >
-                <span className="absolute inset-0 -z-10 bg-spectrum opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                <span className="grid size-6 place-items-center rounded-full bg-on-accent text-paper transition-transform duration-300 group-hover:rotate-90">
-                  <Plus size={14} strokeWidth={2.5} />
-                </span>
-                <span className="hidden sm:inline">New analysis</span>
-                <span className="sm:hidden">New</span>
+                <t.icon size={15} className={`relative ${active ? t.tint : ""}`} />
+                <span className={`relative hidden ${t.compact ? "lg:inline" : "sm:inline"}`}>{t.label}</span>
               </Link>
-            </motion.span>
-          </Tooltip>
+            );
+          })}
         </nav>
       </motion.div>
     </motion.header>
@@ -98,7 +112,8 @@ export function Footer() {
         </div>
         <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-paper/50">
           {[
-            ["Analyze", "/upload"],
+            ["Stem Separator", "/stems"],
+            ["AI Sample Finder", "/upload"],
             ["Library", "/library"],
           ].map(([label, to]) => (
             <Link key={to} to={to} className="group inline-flex items-center gap-1 transition-colors hover:text-paper">
